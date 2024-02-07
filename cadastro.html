@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro e Login</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background-color: #f4f4f4;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+    }
+
+    form {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      margin-bottom: 275px;
+      width: 300px;
+      text-align: center;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    input {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 16px;
+      box-sizing: border-box;
+    }
+
+    button {
+      background-color: #007BFF;
+      color: #fff;
+      padding: 10px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>Cadastro</h1>
+  <form id="register_form">
+    <label for="name">Nome de usuário:</label>
+    <input type="text" id="name" required>
+
+    <label for="password">Senha:</label>
+    <input type="password" id="password" required>
+
+    <label for="confirm_password">Confirme a senha:</label>
+    <input type="password" id="confirm_password" required>
+
+    <button type="submit">Registrar</button>
+  </form>
+  <!--
+  <h1>Login</h1>
+  <form id="login_form">
+    <label for="name">Nome de usuário:</label>
+    <input type="text" id="name" required>
+    
+    <label for="password">Senha:</label>
+    <input type="password" id="password" required>
+
+    <button type="submit">Login</button>
+  </form>
+    -->
+  <!-- Importando os scripts -->
+  <script>
+    const form = document.querySelector("#register_form");
+    const inputName = document.querySelector("#name");
+    const inputPassword = document.querySelector("#password");
+    const confirmPassword = document.querySelector("#confirm_password");
+
+    let users = []
+
+    function isUserAlreadyRegistred(username) {
+      const user = users.find(user => user.name === username);
+      return user ? { name: user.name, password: user.password } : null;
+    }
+
+    function verifyPassword(password, confirmPassword) {
+      return password == confirmPassword ? true : false;
+    }
+
+    function createNewUser(inputName, inputPassword) {
+      const newUser = {
+        name: inputName,
+        password: inputPassword,
+      }
+      users = [...users, newUser];
+      window.location.href = "main.html";
+    }
+
+    function registerUser(event) {
+      event.preventDefault();
+      let userRegistered = isUserAlreadyRegistred(inputName.value);
+      if (userRegistered) {
+        alert("Esse nome de usuário já está cadastrado!");
+        return
+      }
+      else {
+        let verifiedPassword = verifyPassword(inputPassword.value, confirmPassword.value);
+        verifiedPassword ? createNewUser(inputName.value, inputPassword.value) : alert("As senhas não coincidem. Por favor, tente novamente.");
+      }
+    }
+
+    form.addEventListener("submit", registerUser);
+
+    /*
+    const formLogin = document.querySelector("#login_form");
+    const inputNameLogin = document.querySelector("#name");
+    const inputPasswordLogin = document.querySelector("#password");
+
+    let usersLogin = [];
+
+    function userExists(username) {
+      const userLogin = usersLogin.find(userLogin => userLogin.name === username);
+      return userLogin ? { name: userLogin.name, password: userLogin.password } : null;
+    }
+
+    function userLogins(event) {
+      event.preventDefault();
+      
+      const isRegistered = userExists(inputName.value);
+      
+      //console.log(isRegistered)
+
+      if (!isRegistered) {
+        alert("O usuário informado não está cadastrado!");
+      } else {
+        isRegistered.password === inputPassword.value ? window.location.href = 'main.html' : alert("Senha inválida!");
+        
+      }
+    }
+
+    form.addEventListener("submit", userLogins);
+    */
+  </script>
+</body>
+
+</html>

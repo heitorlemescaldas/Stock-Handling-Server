@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Página principal</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #F2F2F2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            margin-top: 30px;
+        }
+
+        main {
+            background-color: lightblue;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 24px;
+        }
+
+        button {
+            background-color: #25274D;
+            color: #F2F2F2;
+            border: none;
+            padding: 10px 20px;
+            margin: 6px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #F2F2F2;
+            color: #25274D;
+        }
+
+        select,
+        input {
+            display: block;
+            padding: 5px;
+            margin: 5px auto;
+        }
+
+        p {
+            font-size: 18px;
+        }
+
+        canvas {
+            display: none;
+            /* Esconde todos os elementos canvas por padrão */
+        }
+    </style>
+</head>
+
+<body>
+    <main>
+        <h1>Configurações Avançadas</h1>
+        <p>Escolha os dados a serem acessados:</p>
+        <select id="escolherTicker">
+            <option value="BBAS3">BBAS3</option>
+            <option value="PETR3">PETR3</option>
+            <option value="ITSA3">ITSA3</option>
+            <option value="VALE3">VALE3</option>
+            <option value="MGLU3">MGLU3</option>
+        </select>
+        <button onclick="mostrarUltimo()">Mostrar dados mais recentes</button>
+        <button onclick="mediaHigh()">Média das Altas</button>
+        <button onclick="mediaLow()">Média das baixas</button>
+        <button onclick="calcularMediasMensais()">Médias Mensais</button>
+        <p id="p"></p>
+        <canvas id="monthlyAveragesChart"></canvas>
+        <canvas id="highChart"></canvas>
+        <canvas id="lowChart"></canvas>
+    </main>
+
+    <script>
+        let highChart;
+        let lowChart;
+        let monthlyAveragesChart;
+
+        const formatter = new Intl.NumberFormat('pt-BR', {
+            style: 'currency',
+            currency: 'BRL'
+        });
+
+        function mostrarUltimo() {
+            // Destruir gráficos existentes
+            if (highChart) {
+                highChart.destroy();
+            }
+            if (lowChart) {
+                lowChart.destroy();
+            }
+            if (monthlyAveragesChart) {
+                monthlyAveragesChart.destroy();
+            }
+            var ticker = document.querySelector("#escolherTicker").value;
+            var texto = document.querySelector("#p");
+            texto.innerText = "Mostrando resultados do último dia registrado:\n\n";
+
+            fetch(`http://localhost:8000/historico/${ticker}`)
+                .then((resposta) => {
+                    return resposta.json();
+                })
+                .then((dados) => {
+                    let i = dados.length - 1;
+                    var date = dados[i].Date;
+                    var open = formatter.format(parseFloat(dados[i].Open));
+                    var high = formatter.format(parseFloat(dados[i].High));
+                    var low = formatter.format(parseFloat(dados[i].Low));
+                    var close = formatter.format(parseFloat(dados[i].Close));
+                    var fechamentoAjustado = formatter.format(parseFloat(dados[i]["Adj Close"]));
+                    var volume = parseFloat(dados[i].Volume);
+
+                    texto.innerText += `Data: ${date} |`;
+                    texto.innerText += ` Abertura: ${open} |`;
+                    texto.innerText += ` Fechamento: ${close} |`;
+                    texto.innerText += ` Alta: ${high} |`;
+                    texto.innerText += ` Baixa: ${low} |`;
+                    texto.innerText += ` Volume: ${volume}\n`;
+                })
+                .catch((erro) => {
+                    console.log(`Erro na requisição: ${erro}`);
+                })
+                .finally(() => {
+                    console.log(`Requisição finalizada!`);
+                });
+        }
+
+
+        function mediaHigh() {
+            var ticker = document.querySelector("#escolherTicker").value;
+            var texto = document.querySelector("#p");
+            texto.innerText = "";
+
+            fetch(`http://localhost:8000/historico/${ticker}`)
+                .then((resposta) => {
+                    return resposta.json();
+                })
+                .then((dados) => {
+                    var contador = 0;
+                    var media = 0;
+                    for (let i = 0; i < dados.length; i++) {
+                        media += parseFloat(dados[i].High);
+                        contador += 1;
+                    }
+                    media = media / contador;
+                    texto.innerText = `A média das altas é de: ${formatter.format(media)}`;
+
+                    // Chame a função para gerar o gráfico
+                    plotHighChart(dados);
+                })
+                .catch((erro) => {
+                    console.log(`Erro na requisição: ${erro}`);
+                })
+                .finally(() => {
+                    console.log(`Requisição finalizada!`);
+                });
+        }
+
+        function mediaLow() {
+            var ticker = document.querySelector("#escolherTicker").value;
+            var texto = document.querySelector("#p");
+            texto.innerText = "";
+
+            fetch(`http://localhost:8000/historico/${ticker}`)
+                .then((resposta) => {
+                    return resposta.json();
+                })
+                .then((dados) => {
+                    var contador = 0;
+                    var media = 0;
+                    for (let i = 0; i < dados.length; i++) {
+                        media += parseFloat(dados[i].Low);
+                        contador += 1;
+                    }
+
+                    media = media / contador;
+                    texto.innerText = `A média das baixas é de: ${formatter.format(media)}`;
+
+                    // Chame a função para gerar o gráfico
+                    plotLowChart(dados);
+                })
+                .catch((erro) => {
+                    console.log(`Erro na requisição: ${erro}`);
+                })
+                .finally(() => {
+                    console.log(`Requisição finalizada!`);
+                });
+        }
+
+        function calcularMediasMensais() {
+            var ticker = document.querySelector("#escolherTicker").value;
+            var texto = document.querySelector("#p");
+            texto.innerText = "";
+
+            const mesesNomes = [
+                "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+                "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+            ];
+
+            const nomeMesParaNumero = {
+                "Janeiro": "01", "Fevereiro": "02", "Março": "03", "Abril": "04",
+                "Maio": "05", "Junho": "06", "Julho": "07", "Agosto": "08",
+                "Setembro": "09", "Outubro": "10", "Novembro": "11", "Dezembro": "12"
+            };
+
+            const formatter = new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            });
+
+            fetch(`http://localhost:8000/historico/${ticker}`)
+                .then((resposta) => {
+                    return resposta.json();
+                })
+                .then((dados) => {
+                    var mediasMensais = {};
+                    for (let i = 0; i < dados.length; i++) {
+                        var data = dados[i].Date;
+                        var mesNumero = parseInt(data.split('-')[1], 10);
+                        var ano = data.split('-')[0];
+                        var mesNome = mesesNomes[mesNumero - 1];
+                        var mesAno = mesNome + '/' + ano;
+
+                        if (!mediasMensais[mesAno]) {
+                            mediasMensais[mesAno] = {
+                                somaHigh: 0,
+                                somaLow: 0,
+                                somaClose: 0,
+                                contador: 0
+                            };
+                        }
+
+                        mediasMensais[mesAno].somaHigh += parseFloat(dados[i].High);
+                        mediasMensais[mesAno].somaLow += parseFloat(dados[i].Low);
+                        mediasMensais[mesAno].somaClose += parseFloat(dados[i].Close);
+                        mediasMensais[mesAno].contador += 1;
+                    }
+
+                    var mediasMensaisArray = [];
+                    for (var mesAno in mediasMensais) {
+                        var [mes, ano] = mesAno.split('/');
+                        var mesNumero = nomeMesParaNumero[mes];
+                        var mesAnoNumerico = `${ano}-${mesNumero}`;
+                        var mediaHigh = formatter.format(mediasMensais[mesAno].somaHigh / mediasMensais[mesAno].contador);
+                        var mediaLow = formatter.format(mediasMensais[mesAno].somaLow / mediasMensais[mesAno].contador);
+                        var mediaClose = formatter.format(mediasMensais[mesAno].somaClose / mediasMensais[mesAno].contador);
+                        mediasMensaisArray.push({ mesAnoNumerico, mesAno, mediaHigh, mediaLow, mediaClose });
+                    }
+
+                    mediasMensaisArray.sort((a, b) => (a.mesAnoNumerico > b.mesAnoNumerico ? 1 : -1));
+
+                    // Preparar dados para o gráfico
+                    var dadosGrafico = mediasMensaisArray.map(function (item) {
+                        return {
+                            mesAno: item.mesAno,
+                            media: (mediasMensais[item.mesAno].somaHigh + mediasMensais[item.mesAno].somaLow + mediasMensais[item.mesAno].somaClose) / (3 * mediasMensais[item.mesAno].contador)
+                        };
+                    });
+
+                    for (var media of mediasMensaisArray) {
+                        texto.innerText += `${media.mesAno} - Média High: ${media.mediaHigh} | Média Low: ${media.mediaLow} | Média Close: ${media.mediaClose}\n`;
+                    }
+
+                    // Chamar a função para gerar o gráfico
+                    plotMonthlyAveragesChart(dadosGrafico);
+                })
+                .catch((erro) => {
+                    console.log(`Erro na requisição: ${erro}`);
+                })
+                .finally(() => {
+                    console.log(`Requisição finalizada!`);
+                });
+        }
+
+        function plotHighChart(data) {
+            // Destruir gráficos existentes
+            if (highChart) {
+                highChart.destroy();
+            }
+            if (lowChart) {
+                lowChart.destroy();
+            }
+            if (monthlyAveragesChart) {
+                monthlyAveragesChart.destroy();
+            }
+
+            var highValues = data.map(function (item) {
+                return parseFloat(item.High);
+            });
+
+            var months = data.map(function (item) {
+                var date = new Date(item.Date);
+                return date.toLocaleString('default', { month: 'short', year: 'numeric' });
+            });
+
+            var ctx = document.getElementById('highChart').getContext('2d');
+
+            highChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: months,
+                    datasets: [{
+                        label: 'Média das Altas',
+                        data: highValues,
+                        borderColor: 'blue',
+                        backgroundColor: 'rgba(0, 0, 255, 0.2)',
+                        fill: true,
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            ticks: {
+                                // Customiza a exibição dos ticks (valores no eixo y)
+                                callback: function (value, index, values) {
+                                    return formatter.format(value);
+                                }
+                            }
+                        },
+                    },
+                    tooltips: {
+                        // Customiza as tooltips
+                        callbacks: {
+                            label: function (tooltipItem, data) {
+                                return formatter.format(tooltipItem.yLabel);
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: 'black',
+                            }
+                        },
+                    },
+                }
+            });
+        }
+
+        function plotLowChart(data) {
+            document.getElementById('lowChart').style.display = 'block';
+            // Destruir gráficos existentes
+            if (highChart) {
+                highChart.destroy();
+            }
+            if (lowChart) {
+                lowChart.destroy();
+            }
+            if (monthlyAveragesChart) {
+                monthlyAveragesChart.destroy();
+            }
+
+            var lowValues = data.map(function (item) {
+                return parseFloat(item.Low);
+            });
+
+            var months = data.map(function (item) {
+                var date = new Date(item.Date);
+                return date.toLocaleString('default', { month: 'short', year: 'numeric' });
+            });
+
+            var ctx = document.getElementById('lowChart').getContext('2d');
+
+            lowChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: months,
+                    datasets: [{
+                        label: 'Média das Baixas',
+                        data: lowValues,
+                        borderColor: 'red',
+                        backgroundColor: 'rgba(255, 0, 0, 0.2)',
+                        fill: true,
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            ticks: {
+                                // Customiza a exibição dos ticks (valores no eixo y)
+                                callback: function (value, index, values) {
+                                    return formatter.format(value);
+                                }
+                            }
+                        },
+                    },
+                    tooltips: {
+                        // Customiza as tooltips
+                        callbacks: {
+                            label: function (tooltipItem, data) {
+                                return formatter.format(tooltipItem.yLabel);
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: 'black',
+                            }
+                        },
+                    },
+                }
+            });
+        }
+
+        function plotMonthlyAveragesChart(data) {
+            document.getElementById('highChart').style.display = 'block';
+            // Destruir gráficos existentes
+            if (highChart) {
+                highChart.destroy();
+            }
+            if (lowChart) {
+                lowChart.destroy();
+            }
+            if (monthlyAveragesChart) {
+                monthlyAveragesChart.destroy();
+            }
+
+            var monthlyAverages = data.map(function (item) {
+                return parseFloat(item.media);
+            });
+
+            var months = data.map(function (item) {
+                return item.mesAno;
+            });
+
+            var ctx = document.getElementById('monthlyAveragesChart').getContext('2d');
+
+            monthlyAveragesChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: months,
+                    datasets: [{
+                        label: 'Média Comum Mensal',
+                        data: monthlyAverages,
+                        borderColor: 'green',
+                        backgroundColor: 'rgba(0, 128, 0, 0.2)',
+                        fill: true,
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            ticks: {
+                                // Customiza a exibição dos ticks (valores no eixo y)
+                                callback: function (value, index, values) {
+                                    return formatter.format(value);
+                                }
+                            }
+                        },
+                    },
+                    tooltips: {
+                        // Customiza as tooltips
+                        callbacks: {
+                            label: function (tooltipItem, data) {
+                                return formatter.format(tooltipItem.yLabel);
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: 'black',
+                            }
+                        },
+                    },
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>

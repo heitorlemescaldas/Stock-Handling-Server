@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Exibir Dados CSV</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #F2F2F2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            margin-top: 30px;
+        }
+
+        main {
+            background-color: lightblue;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 24px;
+        }
+
+        button {
+            background-color: #25274D;
+            color: #F2F2F2;
+            border: none;
+            padding: 10px 20px;
+            margin: 6px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #F2F2F2;
+            color: #25274D;
+        }
+
+        select,
+        input,
+        label {
+            display: block;
+            padding: 5px;
+            margin: 5px auto;
+        }
+
+        p {
+            font-size: 18px;
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .input-group label,
+        .input-group input,
+        .input-group button {
+            margin: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <main>
+        <h1>Página Principal</h1>
+        <div>
+            <label for="ticker">Ticker:</label>
+            <select id="ticker">
+                <option value="BBAS3">BBAS3</option>
+                <option value="PETR3">PETR3</option>
+                <option value="ITSA3">ITSA3</option>
+                <option value="VALE3">VALE3</option>
+                <option value="MGLU3">MGLU3</option>
+            </select>
+        </div>
+        <br>
+        <div class="input-group">
+            <label for="dataEspecifica">Data Específica:</label>
+            <input type="date" id="dataEspecifica" min="2022-10-05" max="2023-10-04">
+            <button onclick="buscarDados()">Buscar Data</button>
+        </div>
+        <br>
+        <div class="input-group">
+            <label for="dataInicio">Data de Início:</label>
+            <input type="date" id="dataInicio" min="2022-10-05" max="2023-10-04">
+            <label for="dataFim">Data Final:</label>
+            <input type="date" id="dataFim" min="2022-10-05" max="2023-10-04">
+            <button onclick="porDatas()">Buscar por Intervalo de Datas</button>
+        </div>
+        <br>
+        <button onclick="buscarHistorico()">Mostrar Todo o Histórico</button>
+        <button onclick="redirecionaSite()">Opções de Médias</button>
+        <p id="p"></p>
+        <pre id="resultado"></pre>
+    </main>
+    <script>
+        function redirecionaSite() {
+            window.location.href = "medias.html";
+        }
+
+        function buscarDados() {
+            document.getElementById("resultado").textContent = ""; // Limpar resultados anteriores
+            const ticker = document.getElementById("ticker").value;
+            const dataEspecifica = document.getElementById("dataEspecifica").value;
+            const dataInicio = document.getElementById("dataInicio").value;
+            const dataFim = document.getElementById("dataFim").value;
+
+            if (dataEspecifica) {
+                buscarDataEspecifica(ticker, dataEspecifica);
+            } else if (dataInicio && dataFim) {
+                buscarIntervaloDatas(ticker, dataInicio, dataFim);
+            } else {
+                document.getElementById("resultado").textContent = "Por favor, insira uma data específica ou uma data de início e uma data final.";
+            }
+        }
+
+        function buscarDataEspecifica(ticker, data) {
+            document.getElementById("resultado").textContent = ""; // Limpar resultados anteriores
+            let url = `http://localhost:8000/historico/${ticker}/${data}`;
+            buscarDadosNaURL(url);
+        }
+
+        function porDatas() {
+            document.getElementById("resultado").textContent = ""; // Limpar resultados anteriores
+            const ticker = document.getElementById("ticker").value;
+            const dataInicio = document.getElementById("dataInicio").value;
+            const dataFinal = document.getElementById("dataFim").value;
+
+            let url = `http://localhost:8000/historico/${ticker}`;
+
+            // Fetch é uma operação assíncrona
+            fetch(url)
+                .then((resposta) => resposta.json())
+                .then((dados) => {
+                    // Filtrar os dados para o intervalo de datas especificado
+                    let dadosFiltrados = dados.filter(cotacao => {
+                        let dataCotacao = new Date(cotacao.Date);
+                        let inicio = new Date(dataInicio);
+                        let fim = new Date(dataFinal);
+                        return dataCotacao >= inicio && dataCotacao <= fim;
+                    });
+
+                    // Se houver dados filtrados, formatá-los e exibi-los
+                    if (dadosFiltrados.length > 0) {
+                        let resultadoFormatado = formatarDados(dadosFiltrados);
+                        document.getElementById("resultado").textContent = resultadoFormatado;
+                    } else {
+                        document.getElementById("resultado").textContent = "Não foram encontrados dados para o intervalo de datas especificado.";
+                    }
+                })
+                .catch((erro) => {
+                    console.log(`Erro na requisição: ${erro}`);
+                    document.getElementById("resultado").textContent = `Erro ao buscar dados: ${erro}`;
+                });
+        }
+
+        /*
+        function buscarIntervaloDatas(ticker, dataInicio, dataFim) {
+            let url = `http://localhost:8000/historico/${ticker}/${dataInicio}/${dataFim}`;
+            buscarDadosNaURL(url);
+        }
+        */
+
+        function buscarHistorico() {
+            document.getElementById("resultado").textContent = ""; // Limpar resultados anteriores
+            const ticker = document.getElementById("ticker").value;
+            let url = `http://localhost:8000/historico/${ticker}`;
+            buscarDadosNaURL(url);
+        }
+
+        function buscarDadosNaURL(url) {
+            document.getElementById("resultado").textContent = ""; // Limpar resultados anteriores
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Dados não disponíveis');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Formatando e exibindo os dados organizadamente
+                    const resultado = formatarDados(data);
+                    document.getElementById("resultado").textContent = resultado;
+                })
+                .catch(error => {
+                    document.getElementById("resultado").textContent = error.message;
+                });
+        }
+
+        function formatarDados(data) {
+            // Criando um formatador de número para a moeda brasileira
+            let formatter = new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL',
+            });
+
+            let resultadoFormatado = '';
+            data.forEach(cotacao => {
+                // Convertendo as strings para números flutuantes
+                let open = parseFloat(cotacao.Open.replace(",", "."));
+                let close = parseFloat(cotacao.Close.replace(",", "."));
+                let low = parseFloat(cotacao.Low.replace(",", "."));
+                let high = parseFloat(cotacao.High.replace(",", "."));
+
+                // Formatando e adicionando ao resultado
+                resultadoFormatado += `Data: ${cotacao.Date} | `;
+                resultadoFormatado += `Abertura: ${formatter.format(open)} | `;
+                resultadoFormatado += `Fechamento: ${formatter.format(close)} | `;
+                resultadoFormatado += `Mínima: ${formatter.format(low)} | `;
+                resultadoFormatado += `Máxima: ${formatter.format(high)}\n\n`;
+            });
+            return resultadoFormatado;
+        }
+
+    </script>
+</body>
+
+</html>
